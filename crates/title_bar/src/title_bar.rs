@@ -352,9 +352,11 @@ impl Render for TitleBar {
                 .into_any_element(),
         );
 
-        children.push(self.render_collaborator_list(window, cx).into_any_element());
+        if self.client.cloud_services_enabled() {
+            children.push(self.render_collaborator_list(window, cx).into_any_element());
+        }
 
-        if title_bar_settings.show_onboarding_banner {
+        if self.client.cloud_services_enabled() && title_bar_settings.show_onboarding_banner {
             if let Some(banner) = &self.banner {
                 children.push(banner.clone().into_any_element())
             }
@@ -381,12 +383,15 @@ impl Render for TitleBar {
                 .pr_1()
                 .gap_1()
                 .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
-                .child(self.render_call_controls(window, cx))
-                .children(self.render_connection_status(status, cx))
+                .when(self.client.cloud_services_enabled(), |this| {
+                    this.child(self.render_call_controls(window, cx))
+                        .children(self.render_connection_status(status, cx))
+                })
                 .child(self.update_version.clone())
                 .when(
                     user.is_none()
                         && is_signed_out_or_auth_error
+                        && self.client.cloud_services_enabled()
                         && TitleBarSettings::get_global(cx).show_sign_in,
                     |this| this.child(self.render_sign_in_button(cx)),
                 )
@@ -404,9 +409,11 @@ impl Render for TitleBar {
                             ),
                     )
                 })
-                .when(TitleBarSettings::get_global(cx).show_user_menu, |this| {
-                    this.child(self.render_user_menu_button(cx))
-                })
+                .when(
+                    self.client.cloud_services_enabled()
+                        && TitleBarSettings::get_global(cx).show_user_menu,
+                    |this| this.child(self.render_user_menu_button(cx)),
+                )
                 .into_any_element(),
         );
 

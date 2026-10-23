@@ -232,14 +232,16 @@ fn register_language_model_providers(
     credentials_provider: Arc<dyn CredentialsProvider>,
     cx: &mut Context<LanguageModelRegistry>,
 ) {
-    registry.register_provider(
-        Arc::new(CloudLanguageModelProvider::new(
-            user_store,
-            client.clone(),
+    if client.cloud_services_enabled() {
+        registry.register_provider(
+            Arc::new(CloudLanguageModelProvider::new(
+                user_store,
+                client.clone(),
+                cx,
+            )),
             cx,
-        )),
-        cx,
-    );
+        );
+    }
     registry.register_provider(
         Arc::new(AnthropicLanguageModelProvider::new(
             client.http_client(),
@@ -422,6 +424,33 @@ mod tests {
             cx,
         );
         (client, Arc::new(FakeCredentialsProvider))
+    }
+
+    #[gpui::test]
+    fn test_local_build_keeps_direct_providers_without_zed_cloud(cx: &mut App) {
+        let (_, credentials_provider) = init_test(cx);
+        <dyn fs::Fs>::set_global(fs::RealFs::new(None, cx.background_executor().clone()), cx);
+        let client = Client::production(cx);
+        let user_store = cx.new(|cx| UserStore::new(client.clone(), cx));
+        client::RefreshLlmTokenListener::register(client.clone(), user_store.clone(), cx);
+        let registry = cx.new(|_| LanguageModelRegistry::default());
+        registry.update(cx, |registry, cx| {
+            register_language_model_providers(
+                registry,
+                user_store,
+                client,
+                credentials_provider,
+                cx,
+            );
+        });
+        let providers = registry.read(cx).providers();
+        assert!(
+            !providers
+                .iter()
+                .any(|p| p.id() == language_model::ZED_CLOUD_PROVIDER_ID)
+        );
+        assert!(providers.iter().any(|p| p.id().0.as_ref() == "ollama"));
+        assert!(providers.iter().any(|p| p.id().0.as_ref() == "openai"));
     }
 
     fn update_compatible_provider_settings(

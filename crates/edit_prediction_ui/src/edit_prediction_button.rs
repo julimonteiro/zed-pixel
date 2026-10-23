@@ -1152,7 +1152,8 @@ impl EditPredictionButton {
         ContextMenu::build(window, cx, |mut menu, window, cx| {
             let user = self.user_store.read(cx).current_user();
 
-            let needs_sign_in = user.is_none()
+            let needs_sign_in = Client::global(cx).cloud_services_enabled()
+                && user.is_none()
                 && matches!(
                     provider,
                     EditPredictionProvider::None | EditPredictionProvider::Zed
@@ -1575,7 +1576,9 @@ pub fn set_completion_provider(fs: Arc<dyn Fs>, cx: &mut App, provider: EditPred
 pub fn get_available_providers(cx: &mut App) -> Vec<EditPredictionProvider> {
     let mut providers = Vec::new();
 
-    providers.push(EditPredictionProvider::Zed);
+    if Client::global(cx).cloud_services_enabled() {
+        providers.push(EditPredictionProvider::Zed);
+    }
 
     let app_state = workspace::AppState::global(cx);
     if copilot::GlobalCopilotAuth::try_get_or_init(app_state, cx)

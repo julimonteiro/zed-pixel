@@ -1,0 +1,14 @@
+[
+  {
+    "label": "CSV: Query RBQL (SELECT a1)",
+    "command": "/opt/homebrew/bin/zed-rbql",
+    "args": [
+      "--input",
+      "\"$ZED_FILE\"",
+      "--with-headers"
+    ],
+    "use_new_terminal": true,
+    "reveal": "always",
+    "save": "current"
+  }
+]

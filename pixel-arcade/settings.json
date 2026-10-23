@@ -1,0 +1,26 @@
+{
+  "theme": "Pixel Arcade",
+  "icon_theme": "Pixel Arcade Icons",
+  "ui_font_family": "VT323",
+  "ui_font_size": 20,
+  "buffer_font_family": "VT323",
+  "buffer_font_size": 22,
+  "buffer_line_height": "standard",
+  "buffer_font_features": {
+    "liga": false
+  },
+  "colorize_brackets": true,
+  "terminal": {
+    "font_family": "MesloLGM Nerd Font Mono",
+    "font_size": 14
+  },
+  "auto_install_extensions": {
+    "rainbow-csv": true
+  },
+  "title_bar": {
+    "show_sign_in": false,
+    "show_user_menu": false,
+    "show_user_picture": false,
+    "show_onboarding_banner": false
+  }
+}

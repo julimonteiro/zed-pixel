@@ -164,6 +164,9 @@ impl Settings for ProxySettings {
 }
 
 pub fn init(client: &Arc<Client>, cx: &mut App) {
+    if !client.cloud_services_enabled() {
+        return;
+    }
     let client = Arc::downgrade(client);
     cx.on_action({
         let client = client.clone();
@@ -205,6 +208,7 @@ struct GlobalClient(Arc<Client>);
 impl Global for GlobalClient {}
 
 pub struct Client {
+    cloud_services_enabled: bool,
     id: AtomicU64,
     peer: Arc<Peer>,
     http: Arc<HttpClientWithUrl>,
@@ -560,7 +564,17 @@ impl Client {
         http: Arc<HttpClientWithUrl>,
         cx: &mut App,
     ) -> Arc<Self> {
+        Self::new_with_cloud_services(clock, http, true, cx)
+    }
+
+    fn new_with_cloud_services(
+        clock: Arc<dyn SystemClock>,
+        http: Arc<HttpClientWithUrl>,
+        cloud_services_enabled: bool,
+        cx: &mut App,
+    ) -> Arc<Self> {
         Arc::new(Self {
+            cloud_services_enabled,
             id: AtomicU64::new(0),
             peer: Peer::new(0),
             telemetry: Telemetry::new(clock, http.clone(), cx),
@@ -588,7 +602,13 @@ impl Client {
             &ClientSettings::get_global(cx).server_url,
             cx.http_client().proxy().cloned(),
         ));
-        Self::new(clock, http, cx)
+        Self::new_with_cloud_services(clock, http, false, cx)
+    }
+
+    /// Whether account-backed Zed services are available in this application.
+    /// Direct API credentials and external agents are independent of this switch.
+    pub fn cloud_services_enabled(&self) -> bool {
+        self.cloud_services_enabled
     }
 
     pub fn id(&self) -> u64 {
@@ -871,6 +891,9 @@ impl Client {
     }
 
     pub async fn has_credentials(&self, cx: &AsyncApp) -> bool {
+        if !self.cloud_services_enabled() {
+            return false;
+        }
         self.credentials_provider
             .read_credentials(cx)
             .await
@@ -882,6 +905,10 @@ impl Client {
         try_provider: bool,
         cx: &AsyncApp,
     ) -> Result<Credentials> {
+        anyhow::ensure!(
+            self.cloud_services_enabled(),
+            "Zed accounts are unavailable in Zed Pixel"
+        );
         let is_reauthenticating = if self.status().borrow().is_signed_out() {
             self.set_status(Status::Authenticating, cx);
             false
@@ -1044,6 +1071,10 @@ impl Client {
         try_provider: bool,
         cx: &AsyncApp,
     ) -> Result<()> {
+        anyhow::ensure!(
+            self.cloud_services_enabled(),
+            "Zed accounts are unavailable in Zed Pixel"
+        );
         // Don't try to sign in again if we're already connected to Collab, as it will temporarily disconnect us.
         if self.status().borrow().is_connected() {
             return Ok(());
@@ -1428,6 +1459,9 @@ impl Client {
     }
 
     pub fn authenticate_with_browser(self: &Arc<Self>, cx: &AsyncApp) -> Task<Result<Credentials>> {
+        if !self.cloud_services_enabled() {
+            return Task::ready(Err(anyhow!("Zed accounts are unavailable in Zed Pixel")));
+        }
         let http = self.http.clone();
         let this = self.clone();
         cx.spawn(async move |cx| {
@@ -1999,6 +2033,25 @@ mod tests {
     use proto::TypedEnvelope;
     use settings::SettingsStore;
     use std::future;
+
+    #[gpui::test]
+    async fn test_local_build_never_starts_zed_authentication(cx: &mut TestAppContext) {
+        init_test(cx);
+        let client = cx.update(Client::production);
+        let attempted = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        client.override_authenticate({
+            let attempted = attempted.clone();
+            move |_| {
+                attempted.store(true, Ordering::SeqCst);
+                Task::ready(Err(anyhow!("authentication must not start")))
+            }
+        });
+
+        let result = client.sign_in(false, &cx.to_async()).await;
+        assert!(result.is_err());
+        assert!(!attempted.load(Ordering::SeqCst));
+        assert!(matches!(*client.status().borrow(), Status::SignedOut));
+    }
 
     #[test]
     fn test_proxy_settings_trims_and_ignores_empty_proxy() {

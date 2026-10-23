@@ -265,6 +265,11 @@ struct GlobalAutoUpdate(Option<Entity<AutoUpdater>>);
 impl Global for GlobalAutoUpdate {}
 
 pub fn init(client: Arc<Client>, cx: &mut App) {
+    if !client.cloud_services_enabled() {
+        cx.set_global(GlobalAutoUpdate(None));
+        return;
+    }
+
     cx.observe_new(|workspace: &mut Workspace, _window, _cx| {
         workspace.register_action(|_, action, window, cx| check(action, window, cx));
 

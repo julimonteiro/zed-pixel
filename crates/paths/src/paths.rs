@@ -169,6 +169,10 @@ pub fn data_dir() -> &'static PathBuf {
 pub fn state_dir() -> &'static PathBuf {
     static STATE_DIR: OnceLock<PathBuf> = OnceLock::new();
     STATE_DIR.get_or_init(|| {
+        if let Some(custom_dir) = CUSTOM_DATA_DIR.get() {
+            return custom_dir.join("state");
+        }
+
         if cfg!(target_os = "macos") {
             return home_dir().join(".local").join("state").join(APP_NAME);
         }
@@ -193,6 +197,10 @@ pub fn state_dir() -> &'static PathBuf {
 pub fn temp_dir() -> &'static PathBuf {
     static TEMP_DIR: OnceLock<PathBuf> = OnceLock::new();
     TEMP_DIR.get_or_init(|| {
+        if let Some(custom_dir) = CUSTOM_DATA_DIR.get() {
+            return custom_dir.join("cache");
+        }
+
         if cfg!(target_os = "macos") {
             return dirs::cache_dir()
                 .expect("failed to determine cachesDirectory directory")
@@ -228,6 +236,10 @@ pub fn hang_traces_dir() -> &'static PathBuf {
 pub fn logs_dir() -> &'static PathBuf {
     static LOGS_DIR: OnceLock<PathBuf> = OnceLock::new();
     LOGS_DIR.get_or_init(|| {
+        if let Some(custom_dir) = CUSTOM_DATA_DIR.get() {
+            return custom_dir.join("logs");
+        }
+
         if cfg!(target_os = "macos") {
             home_dir().join("Library/Logs").join(APP_NAME)
         } else {
@@ -634,4 +646,23 @@ pub fn global_gitignore_path() -> Option<PathBuf> {
     GLOBAL_GITIGNORE_PATH
         .get_or_init(::ignore::gitignore::gitconfig_excludes_path)
         .clone()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn custom_data_directory_isolates_all_mutable_app_paths() {
+        let temporary =
+            std::env::temp_dir().join(format!("zed-pixel-paths-{}", std::process::id()));
+        assert!(!temporary.exists());
+        let root = set_custom_data_dir(temporary.to_str().unwrap()).clone();
+        assert_eq!(data_dir(), &root);
+        assert_eq!(config_dir(), &root.join("config"));
+        assert_eq!(logs_dir(), &root.join("logs"));
+        assert_eq!(temp_dir(), &root.join("cache"));
+        assert_eq!(state_dir(), &root.join("state"));
+        std::fs::remove_dir(temporary).unwrap();
+    }
 }

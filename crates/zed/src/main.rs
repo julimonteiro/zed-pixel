@@ -219,6 +219,20 @@ fn main() {
         return;
     }
 
+    // Use a separate profile even when launched directly or through the companion CLI.
+    let local_profile = if cfg!(target_os = "macos") {
+        paths::home_dir().join("Library/Application Support/ZedPixel")
+    } else {
+        paths::home_dir().join(".local/share/zedpixel")
+    };
+    let local_profile = local_profile.to_string_lossy();
+    let directory =
+        paths::set_custom_data_dir(args.user_data_dir.as_deref().unwrap_or(&local_profile));
+    let restart_arguments = vec![
+        std::ffi::OsString::from("--user-data-dir"),
+        directory.as_os_str().to_owned(),
+    ];
+
     // `zed --crash-handler` Makes zed operate in minidump crash handler mode
     if let Some(socket) = &args.crash_handler {
         crashes::crash_server(socket.as_path(), paths::logs_dir().clone());
@@ -258,16 +272,6 @@ fn main() {
         dump_all_gpui_actions();
         return;
     }
-
-    let restart_arguments = if let Some(directory) = args.user_data_dir.as_deref() {
-        let directory = paths::set_custom_data_dir(directory);
-        vec![
-            std::ffi::OsString::from("--user-data-dir"),
-            directory.as_os_str().to_owned(),
-        ]
-    } else {
-        Vec::new()
-    };
 
     #[cfg(target_os = "windows")]
     match util::get_zed_cli_path() {
@@ -778,7 +782,9 @@ fn main() {
         markdown_preview::init(cx);
         tabular_data_preview::init(cx);
         svg_preview::init(cx);
-        onboarding::init(cx);
+        if client.cloud_services_enabled() {
+            onboarding::init(cx);
+        }
         settings_ui::init(cx);
         keymap_editor::init(cx);
         extensions_ui::init(cx);
@@ -1305,7 +1311,9 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
         }));
     }
 
-    if !request.open_channel_notes.is_empty() || request.join_channel.is_some() {
+    if app_state.client.cloud_services_enabled()
+        && (!request.open_channel_notes.is_empty() || request.join_channel.is_some())
+    {
         cx.spawn(async move |cx| {
             let result = maybe!(async {
                 if let Some(task) = task {
@@ -1369,6 +1377,9 @@ fn handle_open_request(request: OpenRequest, app_state: Arc<AppState>, cx: &mut 
 }
 
 async fn authenticate(client: Arc<Client>, cx: &AsyncApp) -> Result<()> {
+    if !client.cloud_services_enabled() {
+        return Ok(());
+    }
     if stdout_is_a_pty() {
         if client::IMPERSONATE_LOGIN.is_some() {
             client.sign_in_with_optional_connect(false, cx).await?;
@@ -1553,7 +1564,9 @@ pub(crate) async fn restore_or_create_workspace(
             })
             .await?;
         }
-    } else if matches!(kvp.read_kvp(FIRST_OPEN), Ok(None)) {
+    } else if app_state.client.cloud_services_enabled()
+        && matches!(kvp.read_kvp(FIRST_OPEN), Ok(None))
+    {
         cx.update(|cx| show_onboarding_view(app_state, cx)).await?;
     } else {
         cx.update(|cx| {

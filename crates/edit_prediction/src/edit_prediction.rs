@@ -2792,7 +2792,10 @@ impl EditPredictionStore {
                 all_language_settings(None, cx).edit_predictions.provider,
                 EditPredictionProvider::Ollama | EditPredictionProvider::OpenAiCompatibleApi
             );
-        if is_cloud_zeta && !self.client.cloud_client().has_credentials() {
+        if is_cloud_zeta
+            && (!self.client.cloud_services_enabled()
+                || !self.client.cloud_client().has_credentials())
+        {
             return Task::ready(Ok(None));
         }
 
@@ -3557,7 +3560,7 @@ impl Dismissable for ZedPredictUpsell {
 }
 
 pub fn should_show_upsell_modal(cx: &App) -> bool {
-    !is_upsell_dismissed(cx)
+    Client::global(cx).cloud_services_enabled() && !is_upsell_dismissed(cx)
 }
 
 /// Returns whether the user is set up to use Zed's hosted edit predictions but their plan

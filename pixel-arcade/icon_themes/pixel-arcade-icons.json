@@ -1,0 +1,62 @@
+{
+  "$schema": "https://zed.dev/schema/icon_themes/v0.3.0.json",
+  "name": "Pixel Arcade Icons",
+  "author": "Local custom theme",
+  "themes": [
+    {
+      "name": "Pixel Arcade Icons",
+      "appearance": "dark",
+      "directory_icons": {
+        "collapsed": "./icons/folder.svg",
+        "expanded": "./icons/folder-open.svg"
+      },
+      "chevron_icons": {
+        "collapsed": "./icons/right.svg",
+        "expanded": "./icons/down.svg"
+      },
+      "file_icons": {
+        "file": {
+          "path": "./icons/file.svg"
+        },
+        "code": {
+          "path": "./icons/code.svg"
+        },
+        "data": {
+          "path": "./icons/data.svg"
+        },
+        "image": {
+          "path": "./icons/image.svg"
+        },
+        "default": {
+          "path": "./icons/file.svg"
+        }
+      },
+      "file_suffixes": {
+        "rs": "code",
+        "py": "code",
+        "js": "code",
+        "ts": "code",
+        "tsx": "code",
+        "jsx": "code",
+        "go": "code",
+        "c": "code",
+        "cpp": "code",
+        "html": "code",
+        "css": "code",
+        "sh": "code",
+        "csv": "data",
+        "tsv": "data",
+        "json": "data",
+        "toml": "data",
+        "yaml": "data",
+        "yml": "data",
+        "sql": "data",
+        "png": "image",
+        "jpg": "image",
+        "svg": "image",
+        "webp": "image"
+      },
+      "file_stems": {}
+    }
+  ]
+}

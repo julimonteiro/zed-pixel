@@ -22,7 +22,6 @@ pub use app_menus::*;
 use assets::Assets;
 
 use breadcrumbs::Breadcrumbs;
-use client::zed_urls;
 use collections::VecDeque;
 use debugger_ui::debugger_panel::DebugPanel;
 use editor::{Editor, MultiBuffer};
@@ -98,16 +97,16 @@ use uuid::Uuid;
 use vim_mode_setting::VimModeSetting;
 use workspace::notifications::{NotificationId, dismiss_app_notification, show_app_notification};
 
+use workspace::Pane;
 use workspace::{
-    AppState, MultiWorkspace, NewFile, NewWindow, OpenLog, Panel, Toast, Workspace,
-    WorkspaceSettings, create_and_open_local_file,
-    notifications::simple_message_notification::MessageNotification, open_new,
+    AppState, MultiWorkspace, NewFile, NewWindow, OpenLog, Panel, Workspace, WorkspaceSettings,
+    create_and_open_local_file, notifications::simple_message_notification::MessageNotification,
+    open_new,
 };
 use workspace::{CloseProject, CloseWindow, RestoreBanner, with_active_or_new_workspace};
-use workspace::{Pane, notifications::DetachAndPromptErr};
 use zed_actions::{
-    About, GetMerch, OpenAccountSettings, OpenBrowser, OpenDocs, OpenProjectTasks,
-    OpenServerSettings, OpenSettingsFile, OpenStatusPage, OpenZedUrl, Quit,
+    About, GetMerch, OpenBrowser, OpenDocs, OpenProjectTasks, OpenServerSettings, OpenSettingsFile,
+    OpenStatusPage, OpenZedUrl, Quit,
 };
 
 const DOCS_URL: &str = "https://zed.dev/docs/";
@@ -265,11 +264,6 @@ pub fn init(cx: &mut App) {
                 window,
                 cx,
             );
-        });
-    })
-    .on_action(|_: &OpenAccountSettings, cx| {
-        with_active_or_new_workspace(cx, |_, _, cx| {
-            cx.open_url(&zed_urls::account_url(cx));
         });
     })
     .on_action(|_: &OpenTasks, cx| {
@@ -781,8 +775,6 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
         let outline_panel = OutlinePanel::load(workspace_handle.clone(), cx.clone());
         let terminal_panel = TerminalPanel::load(workspace_handle.clone(), cx.clone());
         let git_panel = GitPanel::load(workspace_handle.clone(), cx.clone());
-        let channels_panel =
-            collab_ui::collab_panel::CollabPanel::load(workspace_handle.clone(), cx.clone());
         let debug_panel = DebugPanel::load(workspace_handle.clone(), cx);
 
         async fn add_panel_when_ready(
@@ -805,7 +797,6 @@ fn initialize_panels(window: &mut Window, cx: &mut Context<Workspace>) -> Task<a
             add_panel_when_ready(outline_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(terminal_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(git_panel, workspace_handle.clone(), cx.clone()),
-            add_panel_when_ready(channels_panel, workspace_handle.clone(), cx.clone()),
             add_panel_when_ready(debug_panel, workspace_handle.clone(), cx.clone()),
             initialize_agent_panel(workspace_handle.clone(), cx.clone()).map(|r| r.log_err()),
         );
@@ -1270,32 +1261,6 @@ fn register_actions(
                 }
             }
         })
-        .register_action(|_, _: &install_cli::RegisterZedScheme, window, cx| {
-            cx.spawn_in(window, async move |workspace, cx| {
-                install_cli::register_zed_scheme(cx).await?;
-                workspace.update_in(cx, |workspace, _, cx| {
-                    struct RegisterZedScheme;
-
-                    workspace.show_toast(
-                        Toast::new(
-                            NotificationId::unique::<RegisterZedScheme>(),
-                            format!(
-                                "zed:// links will now open in {}.",
-                                ReleaseChannel::global(cx).display_name()
-                            ),
-                        ),
-                        cx,
-                    )
-                })?;
-                Ok(())
-            })
-            .detach_and_prompt_err(
-                "Error registering zed:// scheme",
-                window,
-                cx,
-                |_, _, _| None,
-            );
-        })
         .register_action(open_project_settings_file)
         .register_action(open_project_tasks_file)
         .register_action(open_worktree_setup_tasks_file)
@@ -1314,14 +1279,6 @@ fn register_actions(
              window: &mut Window,
              cx: &mut Context<Workspace>| {
                 workspace.toggle_panel_focus::<OutlinePanel>(window, cx);
-            },
-        )
-        .register_action(
-            |workspace: &mut Workspace,
-             _: &collab_ui::collab_panel::ToggleFocus,
-             window: &mut Window,
-             cx: &mut Context<Workspace>| {
-                workspace.toggle_panel_focus::<collab_ui::collab_panel::CollabPanel>(window, cx);
             },
         )
         .register_action(

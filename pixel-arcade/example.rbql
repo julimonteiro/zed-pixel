@@ -1,0 +1,3 @@
+SELECT a1
+SELECT a1, a3
+SELECT a1, a3 WHERE int(a3) > 1

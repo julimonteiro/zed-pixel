@@ -1,0 +1,4 @@
+nome,categoria,quantidade,preco,ativo,origem,codigo
+Espada,equipamento,2,150,true,loja,A01
+Pocao,consumivel,12,25,true,craft,B02
+Escudo,equipamento,1,90,false,loja,A03
