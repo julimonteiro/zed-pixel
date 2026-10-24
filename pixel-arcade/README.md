@@ -31,3 +31,9 @@ Perfil separado em `~/Library/Application Support/ZedPixel`, incluindo configura
 Compilação otimizada concluída. 155 testes de client, language_models e paths passaram. Assinatura local do aplicativo validada. Consultas RBQL `SELECT a1` e filtro numérico verificadas; o fluxo interativo mostra e salva o resultado sem modificar o CSV original. A abertura da tarefa pela interface não foi exercitada para não interromper a sessão em uso.
 
 O arquivo `Zed Pixel.zip`, ao lado desta pasta, contém o aplicativo assinado. O perfil e a ferramenta RBQL foram configurados neste Mac e não estão incluídos no ZIP.
+
+## Preferências de edição
+
+Configuração inspirada em [zed-titus](https://github.com/ChrisTitusTech/zed-titus), adaptada ao Pixel Arcade: code lens e ações na barra de ferramentas; ajuda de assinatura automática e após edições; blame na linha; barra de status; números de linha relativos; cursor em barra piscando; abas nativas do macOS; espaços em branco visíveis; tabulações reais; painel Git em árvore à direita.
+
+Code lens e ajuda de assinatura dependem do suporte do servidor de linguagem. As abas nativas também respeitam a preferência de abas do macOS. Números relativos mostram a distância para a linha atual, que exibe seu número absoluto. Projetos, linguagens e formatadores podem definir sua própria indentação.
